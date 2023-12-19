@@ -1,13 +1,15 @@
 package com.example;
 
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Date;
-import java.util.Scanner;
 
 /**
  * Hello world!
@@ -22,70 +24,84 @@ public class App {
 
                 Socket s = server.accept();
                 BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
-                PrintWriter out = new PrintWriter(s.getOutputStream());
+                DataOutputStream out = new DataOutputStream(s.getOutputStream());
 
                 String richiesta = in.readLine();
-                String riga[] = richiesta.split(" ");
-                String path = riga[1];
-                path = path.substring(1);
+                String path = richiesta.split(" ")[1];
                 System.out.println("---" + path + "---");
 
                 do {
-                    String line = in.readLine();
-                    System.out.println(line);
-                } while(!line.equals("")|| !line.isEmpty());
+                    richiesta = in.readLine();
+                    System.out.println(richiesta);
+                } while(!richiesta.isEmpty());
 
-                sendFile(out, path);
-
-                out.flush();
+                if (path.endsWith("/")) 
+                    path += "index.html";
+                
+                int index = path.lastIndexOf('.');
+                if (index > 0) {  
+                    File file = new File("htdocs"+path);
+                    if(file.exists()){
+                        sendFile(out, file);
+                    } else {
+                        String msg = "File non trovato";
+                        out.writeBytes("HTTP/1.1 404 Not Found\n");
+                        out.writeBytes("Content-Length: " + msg.length() + "\n");
+                        out.writeBytes("Server: Java HTTP Server from Gonza: 1.0" + "\n");
+                        out.writeBytes("Date: " + new Date() + "\n");
+                        out.writeBytes("Content-Type: text/plain; charset=utf-8\n");
+                        out.writeBytes("\n");
+                        out.writeBytes(msg);
+                    }
+                }
                 s.close();
-
             }
-            server.close();
-            
+            //server.close(); 
         } catch (Exception e) {
             System.out.println(e.getMessage());
+            System.exit(1);
         }
     }
 
-    private static void sendFile(PrintWriter out, String file) {
-        try {
-            File myObj = new File("src/htdocs"+file);
-            Scanner myReader = new Scanner(myObj);
-            String riga[]= file.split("\\.");
-            String ind = riga[1];
-            out.println("HTTP/1.1 200 OK");
-            out.println("Content-Lenght " + myObj.length());
-            out.println("Server: Java HTTP Server from Gonza: 1.0");
-            out.println("Date: " + new Date());
-
-            if(ind.contains("css")){
-                out.println("Content-Type: text/css; charset=utf-8");
+    private static void sendFile(DataOutputStream out, File file) throws IOException{
+            String [] riga = file.getName().split("\\.");
+            String ind = riga[riga.length-1];
+            System.out.println(ind);
+            out.writeBytes("HTTP/1.1 200 OK" + "\n");
+            out.writeBytes("Content-Lenght: " + file.length() + "\n");
+            out.writeBytes("Server: Java HTTP Server from Gonza: 1.0" + "\n");
+            out.writeBytes("Date: " + new Date() + "\n");   
+            switch (ind) {
+                case "html":
+                case "hml":
+                    out.writeBytes("Content-Type: text/html; charset=utf-8" + "\n");
+                    break;
+                case "css":
+                    out.writeBytes("Content-Type: text/css; charset=utf-8" + "\n");
+                    break;
+                case "png":
+                    out.writeBytes("Content-Type: image/png; charset=utf-8" + "\n");
+                    break;
+                case "jpg":
+                    out.writeBytes("Content-Type: image/jpg; charset=utf-8" + "\n"); 
+                    break;
+                case "js":
+                    out.writeBytes("Content-Type: application/js; charset=utf-8" + "\n");
+                    break;
+                case "ico":
+                    out.writeBytes("Content-Type: favicon/ico; charset=utf-8" + "\n");
+                    break;
+                default:
+                    //out.writeBytes("Content-Type: charset=utf-8\n");
+                    break;
             }
-            if(ind.contains("png")){
-                out.println("Content-Type: image/png; charset=utf-8");
+            
+            InputStream input = new FileInputStream(file);
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = input.read(buf)) != -1) {
+                out.write(buf, 0, n);
             }
-            if(ind.contains("jpg")){
-                out.println("Content-Type: image/jpeg; charset=utf-8");
-            }
-            if(ind.contains("js")){
-                out.println("Content-Type: text/javascript; charset=utf-8");
-            }
-            if(ind.contains("html")){
-                out.println("Content-Type: text/html; charset=utf-8");
-            }
-
-            out.println();
-
-            while (myReader.hasNextLine()) {
-                String data = myReader.nextLine();
-                out.println(data);
-            }
-            out.close();
-            myReader.close();
-
-        } catch (Exception e) {
-            out.println("HTTP/1.1 404 NOT FOUND");
-        }
+            input.close();
     }
 }

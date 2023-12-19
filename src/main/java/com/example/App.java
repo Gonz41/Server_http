@@ -33,9 +33,7 @@ public class App {
                 do {
                     String line = in.readLine();
                     System.out.println(line);
-                    if (line == null || line.isEmpty())
-                        break;
-                } while (true);
+                } while(!line.equals("")|| !line.isEmpty());
 
                 sendFile(out, path);
 
@@ -43,7 +41,8 @@ public class App {
                 s.close();
 
             }
-            //server.close
+            server.close();
+            
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -86,7 +85,7 @@ public class App {
             myReader.close();
 
         } catch (Exception e) {
-            out.println("HTTP/1.1 404 OK");
+            out.println("HTTP/1.1 404 NOT FOUND");
         }
     }
 }
